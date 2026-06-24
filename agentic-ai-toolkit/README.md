@@ -11,7 +11,7 @@ asks for. Every piece maps cleanly to a production framework at its seams.
 |---|---|---|---|
 | `agent.py` | **Agent orchestration** | LangGraph | Explicit state `Graph` (nodes + conditional edges) + a ReAct tool loop with a step budget and a recorded trajectory |
 | `tools.py` | **Tool use** | function/tool calling | Registry pattern; a safe (AST-based, no `eval`) calculator + lookup tool |
-| `rag.py` | **Retrieval (RAG)** | LangChain / vector DBs | chunk -> embed -> store -> retrieve -> grounded prompt with citations; TF-IDF + hashing embedders |
+| `rag.py` | **Retrieval (RAG)** | LangChain / vector DBs | chunk -> embed -> store -> retrieve -> grounded prompt with citations |
 | `tracing.py` | **Observability** | Langfuse / LangSmith | Nested spans + decorator + JSON trace export |
 | `reliability.py` | **Production hardening** | webhooks / queues | Idempotency, token-bucket rate limiting, HMAC signature verify, retries w/ backoff |
 | `service.py` + `serving/app.py` | **Serving** | FastAPI | Framework-agnostic `ChatService` behind a thin HTTP layer |
@@ -69,3 +69,51 @@ appended to `state.trajectory`, which `evaluate_trajectory` can grade.
 
 See `ARCHITECTURE.md` for design rationale, interview talking points, and the
 obvious extension points (real vector DB, Langfuse spans, trajectory eval).
+
+## Deploy
+
+The service is configured entirely through environment variables, so adapting it
+to a challenge is usually just editing `.env` (Docker) or the ConfigMap (k8s) -
+not the code.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `AGENTIC_PROVIDER` | `rules` | `rules` (offline, no keys), `openai`, or `anthropic` |
+| `AGENTIC_MODEL` | provider default | model name override |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | - | only for real providers |
+| `AGENTIC_DOCS_PATH` | built-in demo docs | newline-delimited docs file for RAG |
+| `PORT` | `8000` | HTTP port |
+
+Endpoints: `GET /health`, `POST /chat {"question": "...", "k": 3}`.
+
+```bash
+make docker-build && cp .env.example .env && make docker-run   # Docker
+make compose-up                                                # docker compose
+kubectl apply -k deploy/k8s                                    # Kubernetes (kustomize)
+```
+
+The Kubernetes bundle ships a Namespace, ConfigMap, optional Secret, Deployment
+(2 replicas, liveness/readiness probes on `/health`, resource requests+limits),
+Service, Ingress, and an HPA (2-6 replicas at 70% CPU). The offline `rules`
+provider needs no Secret. Full instructions: `deploy/README.md`.
+
+## Project layout & tooling
+
+```
+src/agentic_toolkit/   core library (stdlib only)
+serving/               FastAPI app (create_app, env-driven)
+tests/                 offline, deterministic unit tests
+examples/quickstart.py runnable API tour: PYTHONPATH=src python examples/quickstart.py
+deploy/k8s/            kustomize bundle
+Dockerfile, docker-compose.yml, .env.example
+```
+
+```bash
+make test    # pytest
+make lint    # ruff + black --check
+make fmt     # auto-fix
+```
+
+Pre-commit hooks (`.pre-commit-config.yaml`), a devcontainer
+(`.devcontainer/`), and CI workflows for both tests and Docker
+(`.github/workflows/`) are included.

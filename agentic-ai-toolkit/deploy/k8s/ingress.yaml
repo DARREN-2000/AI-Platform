@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agentic-toolkit
+  namespace: agentic-toolkit
+spec:
+  rules:
+    - host: agentic-toolkit.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: agentic-toolkit
+                port:
+                  number: 80

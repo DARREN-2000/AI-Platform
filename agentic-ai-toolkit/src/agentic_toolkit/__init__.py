@@ -13,6 +13,7 @@ from .agent import (
     evaluate_trajectory,
     parse_action,
 )
+from .config import DEFAULT_DOCS, build_provider, load_docs
 from .providers import Message, Provider, RuleBasedLLM, ScriptedLLM, with_retries
 from .rag import (
     Document,
@@ -38,6 +39,9 @@ __all__ = [
     "TrajectoryStep",
     "evaluate_trajectory",
     "parse_action",
+    "DEFAULT_DOCS",
+    "build_provider",
+    "load_docs",
     "Message",
     "Provider",
     "RuleBasedLLM",

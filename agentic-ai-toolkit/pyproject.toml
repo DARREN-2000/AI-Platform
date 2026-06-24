@@ -3,13 +3,24 @@ name = "agentic-ai-toolkit"
 version = "0.1.0"
 description = "Composable, offline-runnable building blocks for agentic AI take-homes: agent graphs, RAG, tracing, serving, and reliability."
 requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Morris Darren Babu" }]
+keywords = ["agents", "llm", "rag", "langgraph", "evaluation", "fastapi"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest>=7"]
+dev = ["pytest>=7", "ruff>=0.4", "black>=24.0", "mypy>=1.8"]
 serve = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2"]
 openai = ["openai>=1.0"]
 anthropic = ["anthropic>=0.30"]
+
+[project.urls]
+Repository = "https://github.com/DARREN-2000/AI-Platform"
 
 [project.scripts]
 agentic-toolkit = "agentic_toolkit.cli:main"
@@ -20,3 +31,23 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 90
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.black]
+line-length = 90
+target-version = ["py310"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true

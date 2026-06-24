@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentic-toolkit-config
+  namespace: agentic-toolkit
+data:
+  # Switch to "openai" or "anthropic" when you have keys in the Secret.
+  AGENTIC_PROVIDER: "rules"
+  AGENTIC_MODEL: ""
+  PORT: "8000"

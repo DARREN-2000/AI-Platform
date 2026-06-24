@@ -1,0 +1,23 @@
+name: docker
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t agentic-ai-toolkit:ci .
+      - name: Smoke test the running container
+        run: |
+          docker run -d --name api -p 8000:8000 agentic-ai-toolkit:ci
+          for i in $(seq 1 15); do
+            if curl -fsS http://localhost:8000/health; then ok=1; break; fi
+            sleep 2
+          done
+          docker logs api
+          docker rm -f api
+          test "$ok" = "1"
