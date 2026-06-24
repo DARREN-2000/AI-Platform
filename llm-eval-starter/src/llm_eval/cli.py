@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -33,13 +34,26 @@ def _build_provider(name: str):
         from .providers import AnthropicProvider
 
         return AnthropicProvider()
+    if name == "openrouter":
+        from .providers import OpenAIProvider
+
+        # OpenRouter is OpenAI-compatible; many free models lack json mode.
+        return OpenAIProvider(
+            model=os.getenv("OPENROUTER_MODEL") or "meta-llama/llama-3.1-8b-instruct:free",
+            name="openrouter",
+            base_url=os.getenv("OPENAI_BASE_URL") or "https://openrouter.ai/api/v1",
+            api_key=os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY"),
+            json_mode=False,
+        )
     raise SystemExit(f"Unknown provider: {name}")
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="llm-eval", description="Run LLM-as-judge evals.")
     parser.add_argument("--dataset", default="data/golden.jsonl")
-    parser.add_argument("--provider", default="mock", choices=["mock", "openai", "anthropic"])
+    parser.add_argument(
+        "--provider", default="mock", choices=["mock", "openai", "anthropic", "openrouter"]
+    )
     parser.add_argument("--samples", type=int, default=1)
     parser.add_argument("--pass-threshold", type=float, default=0.6)
     parser.add_argument("--baseline", default="data/baseline.json")

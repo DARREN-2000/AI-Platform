@@ -31,6 +31,14 @@ def build_provider(name: str | None = None) -> Provider:
         return AnthropicProvider(
             model=os.getenv("AGENTIC_MODEL") or "claude-3-5-sonnet-latest"
         )
+    if name in ("openrouter", "open-router"):
+        # OpenRouter is OpenAI-compatible: reuse OpenAIProvider with its base URL.
+        return OpenAIProvider(
+            model=os.getenv("AGENTIC_MODEL") or "meta-llama/llama-3.1-8b-instruct:free",
+            name="openrouter",
+            base_url=os.getenv("OPENAI_BASE_URL") or "https://openrouter.ai/api/v1",
+            api_key=os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY"),
+        )
     raise ValueError(f"unknown provider: {name!r}")
 
 

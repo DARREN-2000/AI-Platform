@@ -7,6 +7,7 @@ runnable with zero API keys, which keeps tests fast and deterministic.
 from __future__ import annotations
 
 import json
+import os
 import random
 import re
 import time
@@ -88,24 +89,41 @@ class MockProvider:
 
 @dataclass
 class OpenAIProvider:
-    """Production provider. Requires `pip install .[openai]` and OPENAI_API_KEY."""
+    """OpenAI-compatible provider. Requires `pip install .[openai]` and a key.
+
+    Point at any OpenAI-compatible endpoint (OpenRouter, Together, a local
+    server) via ``base_url`` / ``OPENAI_BASE_URL``. ``json_mode`` requests the
+    native JSON response format; disable it for models that don't support it
+    (the judge parser tolerates prose/fenced JSON either way).
+    """
 
     model: str = "gpt-4o-mini"
     name: str = "openai"
+    base_url: str | None = None
+    api_key: str | None = None
+    json_mode: bool = True
 
     def complete(self, messages, *, temperature: float = 0.0, max_tokens: int = 512) -> str:
         from openai import OpenAI  # lazy import; only needed in production
 
-        client = OpenAI()
+        client_kwargs: dict = {}
+        base_url = self.base_url or os.getenv("OPENAI_BASE_URL")
+        if base_url:
+            client_kwargs["base_url"] = base_url
+        if self.api_key:
+            client_kwargs["api_key"] = self.api_key
+        client = OpenAI(**client_kwargs)
 
         def _call() -> str:
-            resp = client.chat.completions.create(
+            kwargs = dict(
                 model=self.model,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                response_format={"type": "json_object"},
                 messages=[{"role": m.role, "content": m.content} for m in messages],
             )
+            if self.json_mode:
+                kwargs["response_format"] = {"type": "json_object"}
+            resp = client.chat.completions.create(**kwargs)
             return resp.choices[0].message.content or ""
 
         return with_retries(_call)

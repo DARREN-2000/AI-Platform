@@ -6,6 +6,7 @@ The `Provider` Protocol is intentionally tiny so swapping OpenAI <-> Anthropic
 """
 from __future__ import annotations
 
+import os
 import random
 import re
 import time
@@ -87,15 +88,28 @@ class RuleBasedLLM:
 
 @dataclass
 class OpenAIProvider:
-    """Production provider. `pip install .[openai]` and set OPENAI_API_KEY."""
+    """OpenAI-compatible provider. `pip install .[openai]` and set OPENAI_API_KEY.
+
+    Works with any OpenAI-compatible endpoint (OpenRouter, Together, a local
+    server) by setting ``base_url`` or the ``OPENAI_BASE_URL`` env var plus an
+    ``api_key``. When unset, the SDK's own env handling applies.
+    """
 
     model: str = "gpt-4o-mini"
     name: str = "openai"
+    base_url: str | None = None
+    api_key: str | None = None
 
     def complete(self, messages, *, temperature: float = 0.0, max_tokens: int = 512) -> str:
         from openai import OpenAI  # lazy import; production only
 
-        client = OpenAI()
+        client_kwargs: dict = {}
+        base_url = self.base_url or os.getenv("OPENAI_BASE_URL")
+        if base_url:
+            client_kwargs["base_url"] = base_url
+        if self.api_key:
+            client_kwargs["api_key"] = self.api_key
+        client = OpenAI(**client_kwargs)
 
         def _call() -> str:
             resp = client.chat.completions.create(
