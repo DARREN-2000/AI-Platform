@@ -14,7 +14,23 @@ from .agent import (
     parse_action,
 )
 from .config import DEFAULT_DOCS, build_provider, load_docs
-from .providers import Message, Provider, RuleBasedLLM, ScriptedLLM, with_retries
+from .instrumentation import (
+    CachingProvider,
+    MeteredProvider,
+    UsageMeter,
+    UsageRecord,
+    estimate_tokens,
+    price_for,
+)
+from .providers import (
+    AnthropicProvider,
+    Message,
+    OpenAIProvider,
+    Provider,
+    RuleBasedLLM,
+    ScriptedLLM,
+    with_retries,
+)
 from .rag import (
     Document,
     HashEmbedder,
@@ -28,8 +44,15 @@ from .rag import (
 )
 from .reliability import IdempotencyStore, TokenBucket, sign, verify_signature
 from .service import ChatService
+from .structured import (
+    SchemaError,
+    extract_json,
+    generate_structured,
+    parse_structured,
+    validate,
+)
 from .tools import Tool, ToolRegistry, default_registry, safe_arith
-from .tracing import Span, Tracer, traced
+from .tracing import Span, Tracer, to_langfuse, to_langsmith, traced
 
 __all__ = [
     "END",
@@ -42,7 +65,15 @@ __all__ = [
     "DEFAULT_DOCS",
     "build_provider",
     "load_docs",
+    "CachingProvider",
+    "MeteredProvider",
+    "UsageMeter",
+    "UsageRecord",
+    "estimate_tokens",
+    "price_for",
+    "AnthropicProvider",
     "Message",
+    "OpenAIProvider",
     "Provider",
     "RuleBasedLLM",
     "ScriptedLLM",
@@ -61,12 +92,19 @@ __all__ = [
     "sign",
     "verify_signature",
     "ChatService",
+    "SchemaError",
+    "extract_json",
+    "generate_structured",
+    "parse_structured",
+    "validate",
     "Tool",
     "ToolRegistry",
     "default_registry",
     "safe_arith",
     "Span",
     "Tracer",
+    "to_langfuse",
+    "to_langsmith",
     "traced",
 ]
 __version__ = "0.1.0"

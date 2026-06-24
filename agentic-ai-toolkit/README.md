@@ -12,10 +12,12 @@ asks for. Every piece maps cleanly to a production framework at its seams.
 | `agent.py` | **Agent orchestration** | LangGraph | Explicit state `Graph` (nodes + conditional edges) + a ReAct tool loop with a step budget and a recorded trajectory |
 | `tools.py` | **Tool use** | function/tool calling | Registry pattern; a safe (AST-based, no `eval`) calculator + lookup tool |
 | `rag.py` | **Retrieval (RAG)** | LangChain / vector DBs | chunk -> embed -> store -> retrieve -> grounded prompt with citations |
-| `tracing.py` | **Observability** | Langfuse / LangSmith | Nested spans + decorator + JSON trace export |
+| `tracing.py` | **Observability** | Langfuse / LangSmith | Nested spans + decorator + JSON trace export, plus `to_langfuse` / `to_langsmith` converters |
 | `reliability.py` | **Production hardening** | webhooks / queues | Idempotency, token-bucket rate limiting, HMAC signature verify, retries w/ backoff |
 | `service.py` + `serving/app.py` | **Serving** | FastAPI | Framework-agnostic `ChatService` behind a thin HTTP layer |
 | `evaluate_trajectory` | **Eval bridge** | (pairs with `llm-eval-starter`) | Scores the agent's *path* (tool choice/order), not just the answer |
+| `instrumentation.py` | **Cost control** | provider middleware | Response caching + token/cost/latency metering to conserve API budget |
+| `structured.py` | **Structured output** | function-calling / JSON mode | Extract + validate JSON against a schema with a self-repair retry loop |
 
 > Pairs with the companion **`llm-eval-starter`** repo (LLM-as-judge + CI
 > regression gate). Together they cover eval **and** the agent/RAG/serving stack.
@@ -69,6 +71,36 @@ appended to `state.trajectory`, which `evaluate_trajectory` can grade.
 
 See `ARCHITECTURE.md` for design rationale, interview talking points, and the
 obvious extension points (real vector DB, Langfuse spans, trajectory eval).
+
+## Cost, caching & structured output
+
+When you switch to a real provider, wrap it to cache repeats and track spend
+(crucial when an eval re-runs the same prompts):
+
+```python
+from agentic_toolkit import CachingProvider, MeteredProvider, UsageMeter, OpenAIProvider
+meter = UsageMeter()
+provider = CachingProvider(MeteredProvider(OpenAIProvider(), meter))  # use in ReActAgent/ChatService
+print(meter.summary())   # {calls, total_tokens, cost_usd, avg_latency_ms, ...}
+print(provider.stats())  # {hits, misses, hit_rate, size}
+```
+
+Get typed, validated output from any model (with an automatic repair retry):
+
+```python
+from agentic_toolkit import generate_structured
+schema = {"type": "object", "required": ["score"],
+          "properties": {"score": {"type": "integer", "minimum": 1, "maximum": 5}}}
+verdict = generate_structured(provider, messages, schema)  # dict guaranteed to match the schema
+```
+
+Ship traces to your platform without changing call sites:
+
+```python
+from agentic_toolkit import to_langfuse, to_langsmith
+to_langfuse(tracer.export())    # Langfuse observations payload
+to_langsmith(tracer.export())   # LangSmith run tree
+```
 
 ## Deploy
 

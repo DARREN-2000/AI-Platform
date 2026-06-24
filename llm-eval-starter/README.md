@@ -37,9 +37,9 @@ data/golden.jsonl  ->  EvalRunner  ->  LLMJudge(provider)  ->  ScoreStats  ->  r
 
 - **`dataset.py`** loads versioned JSONL cases (`question`, `answer`, `rubric`, `expected_keywords`).
 - **`judge.py`** prompts the judge for a structured `{score, reasoning}`; `score_robust` medians N samples; `pairwise` does a position-swap to fight position bias.
-- **`metrics.py`** reports mean, **stdev** (variance is half the result), and pass-rate.
+- **`metrics.py`** reports mean, **stdev**, a **bootstrap confidence interval** on the mean, and pass-rate.
 - **`runner.py`** runs the set and `check_regression` compares the mean to a stored baseline.
-- **`cli.py`** returns a non-zero exit code on regression, so CI gates on it.
+- **`cli.py`** returns a non-zero exit code on regression, so CI gates on it; `--cache` adds response caching + token/cost/latency metering to conserve API budget.
 
 ## Adapt it in an interview
 

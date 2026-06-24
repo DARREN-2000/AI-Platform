@@ -2,10 +2,11 @@
 
 Examples:
     python -m llm_eval.cli --provider mock --json
-    python -m llm_eval.cli --provider openai --samples 3
+    python -m llm_eval.cli --provider openai --samples 3 --cache
     python -m llm_eval.cli --update-baseline   # snapshot current scores
 
 Exit code is non-zero on a regression, so CI fails the build automatically.
+Pass --cache to cache + meter provider calls (saves API budget on reruns).
 """
 from __future__ import annotations
 
@@ -14,6 +15,7 @@ import json
 import sys
 from pathlib import Path
 
+from .cache import CachingProvider, MeteredProvider, UsageMeter
 from .dataset import load_jsonl
 from .judge import LLMJudge
 from .providers import MockProvider
@@ -42,24 +44,46 @@ def main(argv=None) -> int:
     parser.add_argument("--pass-threshold", type=float, default=0.6)
     parser.add_argument("--baseline", default="data/baseline.json")
     parser.add_argument("--update-baseline", action="store_true")
+    parser.add_argument("--cache", action="store_true", help="Cache + meter provider calls.")
     parser.add_argument("--json", action="store_true", help="Emit a JSON summary.")
     args = parser.parse_args(argv)
 
     cases = load_jsonl(args.dataset)
-    judge = LLMJudge(provider=_build_provider(args.provider), samples=args.samples)
+    provider = _build_provider(args.provider)
+    meter = None
+    cache = None
+    if args.cache:
+        meter = UsageMeter()
+        cache = CachingProvider(MeteredProvider(provider, meter))
+        provider = cache
+
+    judge = LLMJudge(provider=provider, samples=args.samples)
     runner = EvalRunner(judge=judge, pass_threshold=args.pass_threshold)
     summary = runner.run(cases)
 
+    out = summary.as_dict()
+    if args.cache:
+        out["usage"] = meter.summary()
+        out["cache"] = cache.stats()
+
     if args.json:
-        print(json.dumps(summary.as_dict(), indent=2))
+        print(json.dumps(out, indent=2))
     else:
         s = summary.stats
-        print(f"cases={s.n} mean={s.mean:.3f} stdev={s.stdev:.3f} pass_rate={s.pass_rate:.1%}")
+        print(
+            f"cases={s.n} mean={s.mean:.3f} stdev={s.stdev:.3f} "
+            f"pass_rate={s.pass_rate:.1%} ci=[{s.ci_low:.3f}, {s.ci_high:.3f}]"
+        )
         for r in summary.results:
             print(f"  [{r.score}/5] {r.case_id}: {r.reasoning}")
+        if args.cache:
+            print(f"usage: {json.dumps(meter.summary())}")
+            print(f"cache: {json.dumps(cache.stats())}")
 
     if args.update_baseline:
-        Path(args.baseline).write_text(json.dumps(summary.stats.as_dict(), indent=2), encoding="utf-8")
+        Path(args.baseline).write_text(
+            json.dumps(summary.stats.as_dict(), indent=2), encoding="utf-8"
+        )
         print(f"Baseline updated -> {args.baseline}")
         return 0
 

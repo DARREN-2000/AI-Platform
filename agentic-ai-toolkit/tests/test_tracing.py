@@ -1,4 +1,4 @@
-from agentic_toolkit.tracing import Tracer, traced
+from agentic_toolkit.tracing import Tracer, to_langfuse, to_langsmith, traced
 
 
 def test_nested_spans_export_tree():
@@ -34,3 +34,28 @@ def test_multiple_top_level_spans_wrap_in_trace():
     assert tree["name"] == "trace"
     assert len(tree["children"]) == 2
     assert {c["name"] for c in tree["children"]} == {"a", "b"}
+
+
+def test_to_langsmith_nested_run_tree():
+    t = Tracer()
+    with t.span("root"):
+        with t.span("child"):
+            pass
+    ls = to_langsmith(t.export())
+    assert ls["run_type"] == "chain"
+    assert ls["name"] == "root"
+    assert ls["child_runs"][0]["name"] == "child"
+
+
+def test_to_langfuse_flattens_with_parent_ids():
+    t = Tracer()
+    with t.span("root"):
+        with t.span("child"):
+            pass
+    lf = to_langfuse(t.export())
+    obs = lf["observations"]
+    assert len(obs) == 2
+    root = next(o for o in obs if o["name"] == "root")
+    child = next(o for o in obs if o["name"] == "child")
+    assert root["parentObservationId"] is None
+    assert child["parentObservationId"] == root["id"]

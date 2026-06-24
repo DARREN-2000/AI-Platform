@@ -2,6 +2,8 @@
 
 Design choices worth defending in an interview:
 - Structured JSON verdict (score + reasoning) so results are machine-checkable.
+- Tolerant parsing: real models wrap JSON in prose / code fences, so we extract
+  the first JSON object before giving up.
 - ``score_robust`` runs N samples and takes the median to tame non-determinism.
 - ``pairwise`` does a position-swap to control for position bias.
 - Normalized 0..1 score lets you average across rubrics with different scales.
@@ -9,9 +11,9 @@ Design choices worth defending in an interview:
 from __future__ import annotations
 
 import json
+import re
 import statistics
 from dataclasses import dataclass
-from typing import Sequence
 
 from .providers import Message, Provider
 
@@ -45,6 +47,21 @@ def _build_prompt(question: str, answer: str, rubric: str, expected_keywords) ->
         f"Evaluate the candidate answer.\nRubric: {rubric}\n"
         f"<eval-input>{json.dumps(payload)}</eval-input>"
     )
+
+
+def _extract_obj(raw: str):
+    """Parse a JSON object from judge output, tolerating fences/prose."""
+    try:
+        return json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        pass
+    match = re.search(r"\{.*\}", raw or "", re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            return None
+    return None
 
 
 @dataclass
@@ -85,9 +102,11 @@ class LLMJudge:
 
     @staticmethod
     def _parse(raw: str):
+        obj = _extract_obj(raw)
+        if not isinstance(obj, dict) or "score" not in obj:
+            return 1, f"Unparseable judge output: {str(raw)[:120]!r}"
         try:
-            obj = json.loads(raw)
             score = max(1, min(5, int(obj["score"])))
             return score, str(obj.get("reasoning", ""))
-        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
-            return 1, f"Unparseable judge output: {raw[:120]!r}"
+        except (TypeError, ValueError):
+            return 1, f"Unparseable judge output: {str(raw)[:120]!r}"

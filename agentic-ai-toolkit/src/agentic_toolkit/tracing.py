@@ -1,8 +1,8 @@
-"""Minimal nested-span tracer with a Langfuse-shaped export.
+"""Minimal nested-span tracer with Langfuse / LangSmith export.
 
 Observability is a first-class requirement for agents. This gives you spans,
-nesting, and a JSON tree you can ship to Langfuse/LangSmith by swapping
-`export()` - without changing any call sites.
+nesting, and a JSON tree, plus pure converters to Langfuse and LangSmith shapes
+so you can ship traces to your platform without changing any call sites.
 """
 from __future__ import annotations
 
@@ -74,3 +74,49 @@ def traced(tracer: Tracer, name: Optional[str] = None):
         return wrapper
 
     return deco
+
+
+def to_langsmith(trace: dict) -> dict:
+    """Convert an exported trace into a LangSmith-style nested run tree.
+
+    Pass the result to ``langsmith.Client().create_run(**...)`` (or post it) in
+    production; offline it is a plain, inspectable dict.
+    """
+
+    def conv(node: dict) -> dict:
+        return {
+            "name": node["name"],
+            "run_type": "chain",
+            "extra": {"metadata": node.get("attributes", {})},
+            "latency_ms": node.get("duration_ms", 0.0),
+            "child_runs": [conv(c) for c in node.get("children", [])],
+        }
+
+    return conv(trace)
+
+
+def to_langfuse(trace: dict) -> dict:
+    """Convert an exported trace into a Langfuse-style payload: one trace with a
+    flat list of observations linked by ``parentObservationId``.
+    """
+    observations: List[dict] = []
+    counter = {"n": 0}
+
+    def walk(node: dict, parent_id: Optional[str]) -> None:
+        counter["n"] += 1
+        obs_id = f"obs-{counter['n']}"
+        observations.append(
+            {
+                "id": obs_id,
+                "type": "SPAN",
+                "name": node["name"],
+                "parentObservationId": parent_id,
+                "metadata": node.get("attributes", {}),
+                "latencyMs": node.get("duration_ms", 0.0),
+            }
+        )
+        for child in node.get("children", []):
+            walk(child, obs_id)
+
+    walk(trace, None)
+    return {"name": trace.get("name", "trace"), "observations": observations}

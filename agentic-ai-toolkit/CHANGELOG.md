@@ -7,6 +7,14 @@
   registry with a safe calculator, TF-IDF / hashing RAG, span tracer,
   reliability primitives (idempotency, token bucket, HMAC, retries), and a
   composable `ChatService`.
+- Provider middleware (`instrumentation.py`): `CachingProvider` (response cache)
+  plus `MeteredProvider` / `UsageMeter` for token, cost, and latency tracking -
+  wrap a real provider to conserve API budget and report spend.
+- Structured output (`structured.py`): JSON extraction (handles fences/prose),
+  a JSON-Schema-subset validator, and `generate_structured` with a self-repair
+  retry loop.
+- Tracing exporters: `to_langfuse` and `to_langsmith` convert a trace into
+  Langfuse / LangSmith shapes without changing call sites.
 - Env-driven FastAPI serving layer (`serving/app.py`, `create_app()`).
 - Deployment: production `Dockerfile`, `docker-compose.yml`, and a Kubernetes +
   kustomize bundle (namespace, configmap, optional secret, deployment with
