@@ -1,0 +1,5 @@
+# Golden eval set. One JSON object per line. Version this file.
+{"id": "capital-fr", "question": "What is the capital of France?", "answer": "The capital of France is Paris.", "rubric": "Correctly names Paris.", "expected_keywords": ["paris"], "tags": ["geo"]}
+{"id": "rag-define", "question": "Briefly, what is retrieval-augmented generation?", "answer": "RAG retrieves relevant documents and feeds them as context to ground the LLM's generation.", "rubric": "Mentions retrieval and grounding the LLM with context.", "expected_keywords": ["retriev", "context", "ground"], "tags": ["llm"]}
+{"id": "judge-bias", "question": "Name one bias to control for in LLM-as-judge and how.", "answer": "Position bias, mitigated by swapping the order of the candidates.", "rubric": "Names a real bias and a mitigation.", "expected_keywords": ["position", "swap"], "tags": ["eval"]}
+{"id": "idempotent-weak", "question": "What does idempotent mean for a webhook handler?", "answer": "It is fast.", "rubric": "Explains that repeated deliveries cause no duplicate side effects.", "expected_keywords": ["duplicate", "repeat", "side effect"], "tags": ["reliability"]}
