@@ -22,3 +22,15 @@
 - Tooling/CI: unit tests + offline demos, Docker build & container smoke test,
   ruff/black/mypy config, pre-commit hooks, devcontainer, and a runnable
   `examples/quickstart.py`.
+
+## [Unreleased]
+
+### Added
+- `memory.py`: conversation memories (buffer, window, token-window, summarizing).
+- `guardrails.py`: PII redaction, prompt-injection heuristics, length/blocklist checks, composable `Guardrail` pipeline.
+- `planner.py`: `PlanAndExecuteAgent` (plan-first, then execute via ReAct sub-agent).
+- `multiagent.py`: `Supervisor` with keyword/LLM routing across named agents.
+- `prompts.py`: versioned `PromptTemplate` + `PromptLibrary`.
+- `streaming.py`: `StreamingProvider` + offline `word_stream`.
+- OpenRouter provider support (OpenAI-compatible base URL).
+- `examples/extensions_demo.py` composing the new building blocks offline.

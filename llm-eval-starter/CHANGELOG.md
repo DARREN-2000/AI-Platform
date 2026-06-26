@@ -11,3 +11,9 @@
   `MeteredProvider` / `UsageMeter` to cache repeated judge prompts and report
   tokens / cost / latency; enabled with the `--cache` CLI flag.
 - More forgiving judge JSON parsing (handles fenced or prose-wrapped output).
+
+## [Unreleased]
+
+### Added
+- `similarity.py`: reference-based metrics (exact match, token-F1, cosine, keyword recall).
+- OpenRouter provider option for the judge (`--provider openrouter`).

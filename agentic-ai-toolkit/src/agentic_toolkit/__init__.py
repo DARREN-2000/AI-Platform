@@ -53,6 +53,41 @@ from .structured import (
 )
 from .tools import Tool, ToolRegistry, default_registry, safe_arith
 from .tracing import Span, Tracer, to_langfuse, to_langsmith, traced
+from .memory import (
+    BufferMemory,
+    SummarizingMemory,
+    TokenWindowMemory,
+    WindowMemory,
+)
+from .guardrails import (
+    GuardResult,
+    Guardrail,
+    GuardrailViolation,
+    blocklist,
+    default_input_guard,
+    default_output_guard,
+    detect_prompt_injection,
+    find_pii,
+    injection_detector,
+    max_length,
+    pii_redactor,
+    redact_pii,
+)
+from .prompts import PromptLibrary, PromptTemplate
+from .planner import (
+    PlanAndExecuteAgent,
+    PlanAndExecuteResult,
+    PlanStep,
+    parse_plan,
+)
+from .multiagent import (
+    NamedAgent,
+    RouteDecision,
+    Supervisor,
+    keyword_router,
+    llm_router,
+)
+from .streaming import StreamingProvider, collect, word_stream
 
 __all__ = [
     "END",
@@ -106,5 +141,35 @@ __all__ = [
     "to_langfuse",
     "to_langsmith",
     "traced",
+    "BufferMemory",
+    "SummarizingMemory",
+    "TokenWindowMemory",
+    "WindowMemory",
+    "GuardResult",
+    "Guardrail",
+    "GuardrailViolation",
+    "blocklist",
+    "default_input_guard",
+    "default_output_guard",
+    "detect_prompt_injection",
+    "find_pii",
+    "injection_detector",
+    "max_length",
+    "pii_redactor",
+    "redact_pii",
+    "PromptLibrary",
+    "PromptTemplate",
+    "PlanAndExecuteAgent",
+    "PlanAndExecuteResult",
+    "PlanStep",
+    "parse_plan",
+    "NamedAgent",
+    "RouteDecision",
+    "Supervisor",
+    "keyword_router",
+    "llm_router",
+    "StreamingProvider",
+    "collect",
+    "word_stream",
 ]
 __version__ = "0.1.0"

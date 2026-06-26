@@ -11,6 +11,14 @@ from .judge import JUDGE_SYSTEM, JudgeResult, LLMJudge
 from .metrics import ScoreStats, aggregate_scores, bootstrap_ci
 from .providers import Message, MockProvider, Provider, with_retries
 from .runner import CaseResult, EvalRunner, RunSummary, check_regression
+from .similarity import (
+    cosine_similarity,
+    exact_match,
+    keyword_recall,
+    normalize,
+    token_f1,
+    tokenize,
+)
 
 __all__ = [
     "CachingProvider",
@@ -33,5 +41,11 @@ __all__ = [
     "EvalRunner",
     "RunSummary",
     "check_regression",
+    "cosine_similarity",
+    "exact_match",
+    "keyword_recall",
+    "normalize",
+    "token_f1",
+    "tokenize",
 ]
 __version__ = "0.1.0"
