@@ -29,6 +29,16 @@ export OPENAI_API_KEY=...
 python -m llm_eval.cli --provider openai --samples 3 --json
 ```
 
+Or judge with any OpenAI-compatible endpoint - e.g. **OpenRouter** (free models
+work; the key stays in your env):
+
+```bash
+pip install -e ".[openai]"
+export OPENROUTER_API_KEY=sk-or-...
+export OPENROUTER_MODEL=meta-llama/llama-3.1-8b-instruct:free
+python -m llm_eval.cli --provider openrouter --cache --json
+```
+
 ## How it works
 
 ```
@@ -50,3 +60,16 @@ data/golden.jsonl  ->  EvalRunner  ->  LLMJudge(provider)  ->  ScoreStats  ->  r
   the eval score to the trace.
 
 See `ARCHITECTURE.md` for the design rationale and the obvious extension points.
+
+## Metrics beyond the judge
+
+`similarity.py` adds deterministic, reference-based metrics for when you have gold answers: `exact_match`, `token_f1`, `cosine_similarity` (hashed bag-of-words), and `keyword_recall`. Use them standalone or to cross-check the LLM judge — they are fast, free, and fully reproducible.
+
+## Judge calibration against human labels
+
+An uncalibrated judge is just a vibe. `calibration.py` quantifies how well the
+LLM judge agrees with human gold labels: exact agreement, Cohen's kappa and
+ordinal (quadratic-weighted) kappa, Pearson/Spearman correlation, MAE, and a
+`confusion_at_threshold` that reports **false-positive / false-negative rates**
+at your pass threshold - the asymmetric errors that matter when an eval gates
+shipping. Use `calibrate(judge_scores, human_scores)` for a one-call report.

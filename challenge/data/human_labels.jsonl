@@ -1,0 +1,4 @@
+# Human gold labels for judge calibration. Fields: id, human_score (1-5)
+{"id": "q1", "human_score": 5}
+{"id": "q2", "human_score": 5}
+{"id": "q3", "human_score": 4}

@@ -1,0 +1,5 @@
+# Placeholder golden dataset. Replace with real challenge cases.
+# Fields: id, question, answer, rubric, expected_keywords, tags
+{"id": "q1", "question": "What is the capital of France?", "answer": "Paris is the capital of France.", "rubric": "Names the correct capital.", "expected_keywords": ["paris"], "tags": ["geo"]}
+{"id": "q2", "question": "What is 2 + 2?", "answer": "2 + 2 equals 4.", "rubric": "Correct arithmetic result.", "expected_keywords": ["4"], "tags": ["math"]}
+{"id": "q3", "question": "Why use retries?", "answer": "Retries improve reliability against transient errors.", "rubric": "Mentions reliability and transient failures.", "expected_keywords": ["reliability", "transient"], "tags": ["reliability"]}

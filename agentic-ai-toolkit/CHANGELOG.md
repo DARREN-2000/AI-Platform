@@ -33,4 +33,5 @@
 - `prompts.py`: versioned `PromptTemplate` + `PromptLibrary`.
 - `streaming.py`: `StreamingProvider` + offline `word_stream`.
 - OpenRouter provider support (OpenAI-compatible base URL).
+- `storage.py`: `KeyValueStore` protocol, `InMemoryStore`, and a `PostgresStore` adapter (lazy psycopg, injectable connection) selected via `make_store(DATABASE_URL)`.
 - `examples/extensions_demo.py` composing the new building blocks offline.

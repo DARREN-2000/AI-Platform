@@ -54,6 +54,16 @@ from agentic_toolkit.agent import ReActAgent
 agent = ReActAgent(provider=OpenAIProvider())   # set OPENAI_API_KEY
 ```
 
+Use any OpenAI-compatible endpoint - e.g. **OpenRouter**, including free models
+(the key stays in your env, never in the repo):
+
+```bash
+export AGENTIC_PROVIDER=openrouter
+export OPENROUTER_API_KEY=sk-or-...                       # your key
+export AGENTIC_MODEL=meta-llama/llama-3.1-8b-instruct:free
+python -m agentic_toolkit.cli chat "capital of France?"
+```
+
 ## How the agent works
 
 ```
@@ -110,9 +120,10 @@ not the code.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `AGENTIC_PROVIDER` | `rules` | `rules` (offline, no keys), `openai`, or `anthropic` |
-| `AGENTIC_MODEL` | provider default | model name override |
-| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | - | only for real providers |
+| `AGENTIC_PROVIDER` | `rules` | `rules` (offline, no keys), `openai`, `anthropic`, or `openrouter` |
+| `AGENTIC_MODEL` | provider default | model name override (e.g. `meta-llama/llama-3.1-8b-instruct:free`) |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `OPENROUTER_API_KEY` | - | only for real providers |
+| `OPENAI_BASE_URL` | provider default | OpenAI-compatible endpoint override (set automatically for `openrouter`) |
 | `AGENTIC_DOCS_PATH` | built-in demo docs | newline-delimited docs file for RAG |
 | `PORT` | `8000` | HTTP port |
 
@@ -149,3 +160,36 @@ make fmt     # auto-fix
 Pre-commit hooks (`.pre-commit-config.yaml`), a devcontainer
 (`.devcontainer/`), and CI workflows for both tests and Docker
 (`.github/workflows/`) are included.
+
+## Building blocks & extension points
+
+Everything below is composable and runs offline (no API keys needed). Common take-home directions and where to start:
+
+| Direction | Module | Key types |
+| --- | --- | --- |
+| Agent control flow | `agent.py` | `Graph`, `ReActAgent`, `evaluate_trajectory` |
+| Plan-and-execute | `planner.py` | `PlanAndExecuteAgent`, `parse_plan` |
+| Multi-agent routing | `multiagent.py` | `Supervisor`, `keyword_router`, `llm_router` |
+| Tools | `tools.py` | `Tool`, `ToolRegistry` |
+| RAG / retrieval | `rag.py` | `VectorStore`, `Retriever`, `TfidfEmbedder` |
+| Conversation memory | `memory.py` | `BufferMemory`, `WindowMemory`, `TokenWindowMemory`, `SummarizingMemory` |
+| Prompt management | `prompts.py` | `PromptTemplate`, `PromptLibrary` |
+| Guardrails / safety | `guardrails.py` | `Guardrail`, PII redaction, injection heuristics |
+| Structured output | `structured.py` | `generate_structured`, `validate` |
+| Streaming | `streaming.py` | `StreamingProvider`, `word_stream` |
+| Observability | `tracing.py` | `Tracer`, `to_langfuse`, `to_langsmith` |
+| Cost / caching | `instrumentation.py` | `CachingProvider`, `MeteredProvider`, `UsageMeter` |
+| Reliability | `reliability.py` | `TokenBucket`, `IdempotencyStore`, HMAC signing |
+| Providers | `providers.py` | OpenAI / Anthropic / OpenRouter + offline `RuleBasedLLM` / `ScriptedLLM` |
+| Serving | `service.py`, `serving/app.py` | `ChatService`, FastAPI app |
+| Deploy | `Dockerfile`, `docker-compose.yml`, `deploy/` | container + k8s manifests |
+
+See `examples/extensions_demo.py` for a single offline script that composes guardrails, memory, prompts, plan-and-execute, and multi-agent routing.
+
+## Persistence (in-memory <-> Postgres)
+
+`storage.py` puts persistence behind a small `KeyValueStore` protocol. Use
+`make_store(os.getenv("DATABASE_URL"))`: with no DSN you get an `InMemoryStore`
+(tests/offline); with a DSN you get a `PostgresStore` (lazy-imports `psycopg`, so
+the package stays import-safe without the driver). The adapter accepts an
+injectable connection, so its SQL paths are unit-tested with no real database.

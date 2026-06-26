@@ -16,4 +16,5 @@
 
 ### Added
 - `similarity.py`: reference-based metrics (exact match, token-F1, cosine, keyword recall).
+- `calibration.py`: judge-vs-human calibration (Cohen's / weighted kappa, Pearson/Spearman correlation, MAE, and false-positive/negative rates at a pass threshold).
 - OpenRouter provider option for the judge (`--provider openrouter`).

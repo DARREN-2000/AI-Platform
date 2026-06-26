@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "challenge"
+version = "0.1.0"
+description = "Take-home challenge workspace composing agentic-ai-toolkit + llm-eval-starter"
+requires-python = ">=3.10"
+authors = [{ name = "Morris Darren Babu" }]
+dependencies = []
+
+[project.optional-dependencies]
+# The two sibling packages are installed editable from the repo root:
+#   pip install -e ./agentic-ai-toolkit -e ./llm-eval-starter -e ./challenge
+# For offline dev without installing, put their src dirs on PYTHONPATH (see Makefile).
+serve = ["fastapi", "uvicorn", "pydantic"]
+dev = ["pytest", "ruff>=0.4", "black>=24"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 90
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 90
+target-version = "py310"

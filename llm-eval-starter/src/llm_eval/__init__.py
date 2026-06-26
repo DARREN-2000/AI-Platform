@@ -19,6 +19,17 @@ from .similarity import (
     token_f1,
     tokenize,
 )
+from .calibration import (
+    CalibrationReport,
+    agreement,
+    calibrate,
+    cohens_kappa,
+    confusion_at_threshold,
+    mean_absolute_error,
+    pearson,
+    spearman,
+    weighted_kappa,
+)
 
 __all__ = [
     "CachingProvider",
@@ -47,5 +58,14 @@ __all__ = [
     "normalize",
     "token_f1",
     "tokenize",
+    "CalibrationReport",
+    "agreement",
+    "calibrate",
+    "cohens_kappa",
+    "confusion_at_threshold",
+    "mean_absolute_error",
+    "pearson",
+    "spearman",
+    "weighted_kappa",
 ]
 __version__ = "0.1.0"
