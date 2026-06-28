@@ -1,0 +1,19 @@
+from intentgraph.models import GraphData, Node, Edge
+from intentgraph.orchestrator import Orchestrator
+
+def test_orchestrator_execution():
+    graph_data = GraphData(
+        nodes=[
+            Node(id="file_1.py", name="file_1.py", type="file", filepath="/tmp/file_1.py"),
+            Node(id="func_A", name="func_A", type="function", filepath="/tmp/file_1.py"),
+        ],
+        edges=[
+            Edge(source="file_1.py", target="func_A", type="contains")
+        ]
+    )
+
+    orchestrator = Orchestrator()
+    result = orchestrator.run(graph_data)
+
+    assert result["status"] == "success"
+    assert result["executed_nodes"] == 2
