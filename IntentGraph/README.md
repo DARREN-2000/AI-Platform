@@ -18,10 +18,15 @@ It parses Python codebases into a structured dependency graph of files, classes,
 # Example
 from intentgraph.builder import GraphBuilder
 from intentgraph.orchestrator import Orchestrator
+from intentgraph.interfaces import GraphExecutor
 
 builder = GraphBuilder()
 graph_data = builder.process_directory("./my_project")
 
-orchestrator = Orchestrator()
+class MyExecutor(GraphExecutor):
+    def run(self, graph, **kwargs):
+        return {"status": "success", "executed_nodes": len(graph.nodes)}
+
+orchestrator = Orchestrator(MyExecutor())
 orchestrator.run(graph_data)
 ```

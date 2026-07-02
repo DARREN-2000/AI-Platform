@@ -1,5 +1,11 @@
 from intentgraph.models import GraphData, Node, Edge
 from intentgraph.orchestrator import Orchestrator
+from intentgraph.interfaces import GraphExecutor
+from typing import Any
+
+class MockExecutor(GraphExecutor):
+    def run(self, graph: GraphData, **kwargs: Any) -> Any:
+        return {"status": "success", "executed_nodes": len(graph.nodes)}
 
 def test_orchestrator_execution():
     graph_data = GraphData(
@@ -12,7 +18,8 @@ def test_orchestrator_execution():
         ]
     )
 
-    orchestrator = Orchestrator()
+    executor = MockExecutor()
+    orchestrator = Orchestrator(executor)
     result = orchestrator.run(graph_data)
 
     assert result["status"] == "success"
