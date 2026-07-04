@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Settings2, SlidersHorizontal, ChevronDown, Check, X } from 'lucide-react';
+import { Send, Bot, User, Settings2, SlidersHorizontal, ChevronDown, Check, X, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { MLCEngine } from '@mlc-ai/web-llm';
+import type { InitProgressReport } from '@mlc-ai/web-llm';
+
 
 interface Message {
   role: 'system' | 'user' | 'assistant';
@@ -25,6 +28,13 @@ const Playground: React.FC = () => {
   const [maxTokens, setMaxTokens] = useState(2048);
   const [isTyping, setIsTyping] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [engine, setEngine] = useState<any>(null);
+  const [loadingProgress, setLoadingProgress] = useState<string>('');
+  const [isLoadingModel, setIsLoadingModel] = useState(false);
+  const [modelError, setModelError] = useState<string>('');
+  const [systemPrompt, setSystemPrompt] = useState('');
+
+
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -48,113 +58,93 @@ const Playground: React.FC = () => {
   }, []);
 
 
-  const generateMockResponse = (userInput: string, agentId: string): string => {
-    const lowerInput = userInput.toLowerCase();
 
-    if (lowerInput.includes('hello') || lowerInput.includes('hi')) {
-      return `Hello! I'm the ${AGENTS.find(a => a.id === agentId)?.name}. How can I assist you today?`;
-    }
+  // Initialize WebLLM Engine
 
-    if (agentId === 'dev-agent') {
-      if (lowerInput.includes('react') || lowerInput.includes('component')) {
-        return `Here is a simple React component example:
+  useEffect(() => {
+    const initEngine = async () => {
+      if (engine) return;
+      setIsLoadingModel(true);
+      setModelError('');
+      setLoadingProgress('Initializing WebLLM...');
 
-\`\`\`tsx
-import React from 'react';
+      try {
+        const selectedModel = 'Llama-3.2-1B-Instruct-q4f16_1-MLC';
 
-interface Props {
-  name: string;
-}
+        const newEngine = new MLCEngine();
 
-const Greeting: React.FC<Props> = ({ name }) => {
-  return <div>Hello, {name}!</div>;
-};
-
-export default Greeting;
-\`\`\`
-
-Let me know if you need any changes.`;
-      }
-      return "I'm your Developer Agent. I can help you write code, review PRs, and design architecture. Try asking me for a specific code snippet!";
-    }
-
-    if (agentId === 'sec-agent') {
-       if (lowerInput.includes('sql injection') || lowerInput.includes('security')) {
-         return `To prevent SQL injection, you should always use parameterized queries or prepared statements. Here's an example in Node.js with pg:
-
-\`\`\`javascript
-const text = 'INSERT INTO users(name, email) VALUES($1, $2) RETURNING *'
-const values = ['brianc', 'brian.m.carlson@gmail.com']
-
-try {
-  const res = await client.query(text, values)
-  console.log(res.rows[0])
-} catch (err) {
-  console.log(err.stack)
-}
-\`\`\`
-Never concatenate user input directly into SQL strings.`;
-       }
-       return "I am the Security Agent. I'm here to ensure your code is secure and compliant. Ask me about common vulnerabilities or how to secure your endpoints.";
-    }
-
-    if (agentId === 'data-agent') {
-       return `I'm the Data Analyst Agent. I can help you write SQL queries or analyze datasets. For example, you can ask me to "find the top 5 users by revenue".
-
-Here is a quick sample query:
-\`\`\`sql
-SELECT user_id, SUM(amount) as total_revenue
-FROM orders
-WHERE status = 'completed'
-GROUP BY user_id
-ORDER BY total_revenue DESC
-LIMIT 5;
-\`\`\`
-`;
-    }
-
-    return "I received your message. I am currently operating in mock mode on the frontend playground. My backend connections are not yet established, but I'm ready to help once they are!";
-  };
-
-  const simulateStreamingResponse = (fullResponse: string) => {
-    setIsTyping(true);
-    let currentText = '';
-    const delay = 15; // ms per chunk
-    const chunks = fullResponse.split(/(?<=\s)|(?<=[.,!?;\n])/); // Split by words/punctuation preserving spaces
-
-    // Add an empty assistant message to start updating
-    setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
-
-    let i = 0;
-    const interval = setInterval(() => {
-      if (i < chunks.length) {
-        currentText += chunks[i];
-        setMessages(prev => {
-          const newMessages = [...prev];
-          newMessages[newMessages.length - 1].content = currentText;
-          return newMessages;
+        newEngine.setInitProgressCallback((report: InitProgressReport) => {
+          setLoadingProgress(report.text);
         });
-        i++;
-      } else {
-        clearInterval(interval);
-        setIsTyping(false);
-      }
-    }, delay);
-  };
 
-  const handleSend = (e: React.FormEvent) => {
+        await newEngine.reload(selectedModel);
+
+        setEngine(newEngine);
+        setLoadingProgress('');
+      } catch (err: any) {
+        console.error("Failed to load model:", err);
+        setModelError(err.message || 'Failed to load model. Check console.');
+      } finally {
+        setIsLoadingModel(false);
+      }
+    };
+    initEngine();
+  }, [engine]);
+
+
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isTyping) return;
+    if (!input.trim() || isTyping || !engine) return;
 
     const userMessage = input.trim();
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
 
-    // Simulate backend processing delay
-    setTimeout(() => {
-      const response = generateMockResponse(userMessage, selectedAgent.id);
-      simulateStreamingResponse(response);
-    }, 500);
+    const newMessages: Message[] = [...messages, { role: 'user', content: userMessage }];
+    setMessages(newMessages);
+    setIsTyping(true);
+
+    // Add empty assistant message
+    setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+
+    try {
+      // Prepare chat history for WebLLM
+      const chatHistory = newMessages.map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+
+      // If there's a custom system prompt, inject it at the beginning
+      if (systemPrompt.trim()) {
+         chatHistory.unshift({ role: 'system', content: systemPrompt });
+      }
+
+      const chunks = await engine.chat.completions.create({
+        messages: chatHistory,
+        temperature,
+        max_tokens: maxTokens,
+        stream: true,
+      });
+
+      let currentText = '';
+      for await (const chunk of chunks) {
+        const delta = chunk.choices[0]?.delta?.content || '';
+        currentText += delta;
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1].content = currentText;
+          return updated;
+        });
+      }
+    } catch (err) {
+      console.error("Inference error:", err);
+      setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1].content = "Error generating response. Please try again.";
+          return updated;
+      });
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
@@ -162,6 +152,18 @@ LIMIT 5;
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-4">
           <h1 className="text-2xl font-bold text-gray-800">Agent Playground</h1>
+          {isLoadingModel && !modelError && (
+            <div className="flex items-center text-sm text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
+              <Loader2 size={14} className="mr-2 animate-spin" />
+              <span className="max-w-xs truncate" title={loadingProgress}>{loadingProgress}</span>
+            </div>
+          )}
+          {modelError && (
+             <div className="flex items-center text-sm text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-200">
+               <span className="max-w-md truncate" title={modelError}>Error: {modelError}</span>
+             </div>
+          )}
+
 
           {/* Agent Selector Dropdown */}
           <div className="relative" ref={dropdownRef}>
@@ -307,6 +309,8 @@ LIMIT 5;
                  <textarea
                    className="w-full h-24 p-2 text-sm border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
                    placeholder="Add additional instructions for the agent..."
+                   value={systemPrompt}
+                   onChange={(e) => setSystemPrompt(e.target.value)}
                  ></textarea>
               </div>
             </div>
@@ -320,13 +324,13 @@ LIMIT 5;
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            disabled={isTyping}
+            disabled={isTyping || isLoadingModel || !engine}
             placeholder={isTyping ? "Agent is typing..." : "Type your message to the agent..."}
             className="flex-1 min-w-0 block w-full px-4 py-3 rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 border outline-none disabled:bg-gray-50 disabled:text-gray-500"
           />
           <button
             type="submit"
-            disabled={isTyping || !input.trim()}
+            disabled={isTyping || isLoadingModel || !input.trim() || !engine}
             className="inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <Send size={18} className="mr-2" />
