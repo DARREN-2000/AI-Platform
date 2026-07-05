@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/IntentGraph"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/Inference-Control-Plane"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/GuardrailX"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/enterprise-knowledge-intelligence-platform"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/dashboard"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
