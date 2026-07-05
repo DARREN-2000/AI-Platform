@@ -1,80 +1,178 @@
-# Enterprise AI Platform Architecture
+<div align="center">
+  <img src="docs/assets/hero.svg" alt="Enterprise AI Platform Hero" width="800" />
 
-This document synthesizes an architectural transformation plan for unifying the five core repositories into one cohesive open-source Enterprise AI Platform.
+  <br />
+  <br />
 
-## Phase 1: Repository Review
+  <p>
+    <b>The open-source, production-ready system for orchestrating, governing, and scaling AI workloads.</b>
+  </p>
 
-*   **IntentGraph**
-    *   **Purpose:** Agent orchestration, planning, workflow execution, memory, DAG execution.
-    *   **Current State:** Primarily Python backend for dependency graph parsing/orchestration, with some Next.js web components mentioned in README. Needs better separation of core logic from web UI.
-    *   **Missing:** Standardized integration with a centralized LLM gateway (currently likely using direct API calls) and a unified policy engine.
-*   **Inference Control Plane**
-    *   **Purpose:** LLM routing, provider abstraction, caching, rate limiting, failover, traffic management.
-    *   **Current State:** FastAPI application providing an OpenAI-compatible API interface. Built for scale with Redis/PostgreSQL.
-    *   **Missing:** Deeper integration with GuardrailX to ensure all outgoing traffic is governed.
-*   **GuardrailX**
-    *   **Purpose:** Enterprise AI governance, prompt injection detection, jailbreak prevention, PII protection, policy enforcement.
-    *   **Current State:** FastAPI backend with policy engine capabilities.
-    *   **Missing:** A low-latency interceptor/proxy mode to sit seamlessly in front of the Inference Control Plane.
-*   **EnterpriseIQ (enterprise-knowledge-intelligence-platform)**
-    *   **Purpose:** Enterprise Agentic RAG platform with hybrid retrieval and enterprise knowledge management.
-    *   **Current State:** Python-based retrieval pipeline with strict RBAC and citing capabilities.
-    *   **Missing:** Decoupling from its own internal LLM generation logic to rely on the Inference Control Plane for generation.
-*   **AI Hypervisor Platform**
-    *   **Purpose:** GPU-aware virtualization, compute isolation, workload placement, AI infrastructure layer.
-    *   **Current State:** Go-based control plane for KVM/QEMU, orchestrating GPUs.
-    *   **Missing:** High-level dynamic provisioning hooks for Inference Control Plane to spin up/down models based on traffic.
+  <p>
+    <a href="https://github.com/ai-platform/ai-platform/actions"><img src="https://img.shields.io/github/actions/workflow/status/ai-platform/ai-platform/release.yml?style=flat-square" alt="Build Status"></a>
+    <a href="https://github.com/ai-platform/ai-platform/blob/main/LICENSE"><img src="https://img.shields.io/github/license/ai-platform/ai-platform?style=flat-square" alt="License"></a>
+    <a href="https://github.com/ai-platform/ai-platform/pulls"><img src="https://img.shields.io/github/issues-pr/ai-platform/ai-platform?style=flat-square" alt="Pull Requests"></a>
+    <a href="https://github.com/ai-platform/ai-platform/issues"><img src="https://img.shields.io/github/issues/ai-platform/ai-platform?style=flat-square" alt="Issues"></a>
+  </p>
+</div>
 
-## Phase 2: Architectural Map
+---
 
-The platform consists of five interconnected layers:
+## 📖 Overview
 
-1.  **Layer 1: Infrastructure & Compute (AI Hypervisor Platform)** - Bottom layer, providing physical/virtual GPU resources.
-2.  **Layer 2: Data & Knowledge (EnterpriseIQ)** - Data ingestion, vectorization, RBAC-filtered retrieval.
-3.  **Layer 3: Security & Governance (GuardrailX)** - Sits as a policy enforcement point.
-4.  **Layer 4: Core Inference (Inference Control Plane)** - LLM gateway.
-5.  **Layer 5: Orchestration (IntentGraph)** - Top layer executing user intents using tools and lower layers.
+The **Enterprise AI Platform** is a distributed, microservices-based system designed to solve the complexities of deploying Generative AI in enterprise environments. It moves beyond monolithic prototypes, providing a robust architecture consisting of five independent bounded contexts:
 
-## Phase 3: Dependency Graph
+1.  **IntentGraph:** Agent Orchestration & Planning.
+2.  **EnterpriseIQ:** Zero-Trust Hybrid RAG.
+3.  **Inference Control Plane:** High-Throughput LLM Gateway.
+4.  **GuardrailX:** Sub-millisecond Policy Engine.
+5.  **AI Hypervisor Platform:** GPU Compute Virtualization.
 
-*   `IntentGraph` depends on `GuardrailX` (for prompt/action validation) and `EnterpriseIQ` (for RAG).
-*   `EnterpriseIQ` depends on `GuardrailX` (for query/response validation).
-*   `GuardrailX` acts as a middleware, forwarding requests to `Inference Control Plane`.
-*   `Inference Control Plane` depends on `AI Hypervisor Platform` (to schedule local models on GPUs) and External LLMs.
+### Why this exists
 
-## Phase 4: Interfaces
+Deploying AI in the enterprise requires more than just calling an API. It requires strict data governance, dynamic infrastructure scaling, prompt injection defense, and reliable agentic orchestration. The Enterprise AI Platform provides a unified, highly opinionated, yet loosely coupled ecosystem to handle these requirements at scale.
 
-*   **REST API (OpenAI Compatible):** `GuardrailX` exposes an OpenAI-compatible API to `IntentGraph` and `EnterpriseIQ`, filtering traffic, then forwarding to `Inference Control Plane` via the same standard interface.
-*   **gRPC/NATS:** `Inference Control Plane` to `AI Hypervisor Platform` for high-performance telemetry and dynamic scaling of GPU resources.
-*   **REST API:** `IntentGraph` to `EnterpriseIQ` for `/query` retrieval.
-*   **Shared SDK:** A unified Python SDK (`platform-sdk`) for all inter-service communication to handle retries, tracing, and auth.
+### The Solution
 
-## Phase 5: Shared Libraries
+By decoupling orchestration (IntentGraph), governance (GuardrailX), and compute (AI Hypervisor), the platform ensures that:
+- Developers can build complex agents without worrying about underlying model routing.
+- Security teams can enforce policies without slowing down the hot path.
+- Infrastructure teams can dynamically spin up local GPU models based on real-time queue depth.
 
-1.  `platform-telemetry`: OpenTelemetry setup for tracing (OTLP) and unified logging across Python and Go.
-2.  `platform-auth`: JWT validation, OIDC integration, and standard RBAC schemas.
-3.  `platform-client`: Standardized async HTTP/gRPC clients for internal service-to-service communication.
-4.  `platform-models`: Shared Pydantic/Go models for common data structures (e.g., User, Tenant, Request Context).
+---
 
-## Phase 6: GitHub Organization Structure
+## 🏗️ Architecture Overview
 
-```
+The system strictly adheres to the principle of decoupled bounded contexts.
+
+<div align="center">
+  <img src="docs/assets/architecture.svg" alt="Architecture Overview" width="800" />
+</div>
+
+1.  **Ingress:** A natural language query arrives at `IntentGraph` (Python/Poetry) along with the user's JWT.
+2.  **Retrieval:** `IntentGraph` passes the query and JWT to `EnterpriseIQ` to fetch RBAC-filtered grounding data.
+3.  **Gateway Routing:** `IntentGraph` synthesizes a prompt and sends it to the `Inference Control Plane` (FastAPI).
+4.  **Governance Check:** The Control Plane intercepts the request and performs a sub-millisecond gRPC check against `GuardrailX`.
+5.  **Compute Scaling:** If capacity is low, the Control Plane emits NATS events, triggering the `AI Hypervisor Platform` (Go) to spin up new GPU VMs.
+6.  **Streaming:** The sanitized prompt is dispatched to the model, and tokens stream seamlessly back to the client.
+
+For a deeper dive, see our [Internal Architecture Documentation](docs/architecture.md).
+
+---
+
+## 🛠️ Technology Stack
+
+| Component | Stack | Responsibilities |
+| :--- | :--- | :--- |
+| **IntentGraph** | Python 3.10, Poetry, pytest | Dependency Graph Parsing, Agent Orchestration |
+| **Inference Control Plane** | Python/FastAPI, Redis, PostgreSQL | LLM Routing, Provider Abstraction, Rate Limiting |
+| **GuardrailX** | Python/FastAPI, React | Governance, Policy Engine, PII Redaction |
+| **EnterpriseIQ** | Python, Vector DB (Chroma/Milvus) | Hybrid Search, Data Ingestion, RBAC Retrieval |
+| **AI Hypervisor Platform** | Go, Kubernetes, KVM/QEMU | GPU Virtualization, Compute Isolation |
+| **Dashboard** | React, TypeScript, Vite, Tailwind | Front-end SPA, UI Mockups |
+
+---
+
+## 📂 Folder Structure
+
+```text
 ai-platform/
-├── intentgraph               # Core agent orchestration
-├── inference-control-plane   # LLM routing gateway
-├── guardrailx                # Policy & governance
-├── enterpriseiq              # Knowledge & RAG engine
-├── ai-hypervisor-platform    # Compute infrastructure
-├── docs                      # Platform-wide documentation & architecture
-├── sdk                       # Shared libraries (telemetry, auth, clients)
-├── deployments               # GitOps, Kubernetes manifests, Helm charts
-└── examples                  # E2E sample apps
+├── IntentGraph/               # Core agent orchestration and planning
+├── Inference-Control-Plane/   # LLM routing gateway and caching
+├── GuardrailX/                # Policy enforcement and prompt injection detection
+├── enterpriseiq/              # (EnterpriseIQ) Knowledge and RAG engine
+├── ai-hypervisor-platform/    # Compute infrastructure and GPU orchestration
+├── dashboard/                 # Frontend SPA and mock UI playgrounds
+├── docs/                      # Platform-wide documentation & architecture
+└── examples/                  # E2E sample apps and integration patterns
 ```
 
-## Phase 7: Shared Concerns
+---
 
-*   **Authentication & RBAC:** Central OIDC provider (Keycloak/Auth0). All services validate JWTs using the shared `platform-auth` library.
-*   **Logging & Telemetry:** All services use `platform-telemetry` to push OpenTelemetry traces and structured JSON logs with correlation IDs (`x-request-id`) to a central collector.
-*   **Configuration:** Standardized `.env` parsing across Python (Pydantic Settings) and Go (Viper). Secrets managed via external store (Vault/K8s Secrets).
-*   **Versioning & Releases:** Semantic versioning with automated GitHub Actions pushing to GHCR (`ghcr.io/ai-platform/*`).
-*   **Documentation:** Centralized Backstage or MkDocs repository (`docs/`) pulling OpenAPI specs from all services.
+## 🚀 Quick Start
+
+The platform is designed to be easily runnable locally. You will need **Docker**, **Python 3.10+**, and **Go 1.20+**.
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/ai-platform/ai-platform.git
+cd ai-platform
+```
+
+### 2. Verify Component Installations
+Because the components are loosely coupled, you can install and test them independently.
+
+**IntentGraph (Orchestrator):**
+```bash
+cd IntentGraph
+poetry install
+poetry run pytest
+cd ..
+```
+
+**Inference Control Plane (Gateway):**
+```bash
+cd Inference-Control-Plane
+pip install -r requirements.txt
+pytest
+cd ..
+```
+
+**GuardrailX (Security):**
+```bash
+cd GuardrailX/backend
+pip install -r requirements.txt
+PYTHONPATH=. pytest
+cd ../..
+```
+
+*(Refer to the [Getting Started Guide](docs/getting-started.md) for full docker-compose instructions when available).*
+
+
+---
+
+## ⚙️ Configuration
+
+Each component uses its own `.env` file for configuration to maintain strict bounded contexts. See the individual directories for specific `.env.example` files.
+
+General platform configuration concepts can be found in the [Configuration Documentation](docs/configuration.md).
+
+---
+
+## 👨‍💻 Developer Guide
+
+### Project Internals
+If you want to understand the deep technical decisions behind the platform, please review our internal documentation:
+- [Design Decisions & Principles](DESIGN.md)
+- [System Architecture](docs/architecture.md)
+- [Performance Characteristics](docs/performance.md)
+- [Security Model](docs/security.md)
+
+### Troubleshooting
+Having issues?
+1. Check the [FAQ](docs/faq.md) for common questions.
+2. Review our [Troubleshooting Guide](docs/troubleshooting.md).
+3. Open an issue using our [Bug Report Template](.github/ISSUE_TEMPLATE/bug_report.md).
+
+---
+
+## 🗺️ Roadmap
+
+We are actively developing the platform. See our [Roadmap](ROADMAP.md) to understand where we are heading (e.g., Kubernetes operators, BYOD capabilities).
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please review our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting a Pull Request.
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## 🙏 Acknowledgements
+Built by the community, for the community.
